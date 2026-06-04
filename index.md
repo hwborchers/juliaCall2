@@ -80,8 +80,8 @@ julia_setup()
 All commands in *JuliaCall* start with a `julia_` prefix.
 It is also possible to call these commands with a `jl$` prefix by assigning the setup command to the variable `jl` (or any other valid name) with `jl <- julia_setup()` -- if the user prefers that kind of style.
 
-<p>&nbsp;</p>
-## Using JuliaCall {#using-juliacall}
+
+## Using JuliaCall
 
 ### Basic JuliaCall Commands
 
@@ -221,7 +221,6 @@ sqrt(x)
 Return $\sqrt{x}$. Throws [`DomainError`](@ref) for negative [`Real`](@ref) arguments.
 Use complex negative arguments instead.
 The prefix operator `\sqrt` is equivalent to `sqrt`.
-...
 ```
 
 This explains that `sqrt(-1)` will result in an error in Julia (`NA` in R).
