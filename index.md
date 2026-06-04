@@ -1,5 +1,6 @@
+# JuliaCall
 
-## Introduction {#introduction}
+## Introduction
 
 A short description of how to install JuliaCall and make use of Julia functions from R.
 Includes examples on plotting, for Optimization and Automatic Differentiation (AD), or calculating special functions not available in R.
@@ -237,9 +238,8 @@ The Julia complex number `1im` has been converted to the R representation `1i`.
 In general, reading help for Julia functions through the `julia_help()` interface is not recommended as some of the formatting is lost and the help is difficult to read.
 Instead, read the newest documentation on [docs.julialang.org](https://docs.julialang.org/en/), or open a terminal where Julia runs and look at the help page there.
 
-------------------------------------------------------------------------
 
-## Computing With JuliaCall {#computing-with-juliacall}
+## Computing With JuliaCall
 
 ### Numbers, Vectors, Matrices
 
@@ -457,9 +457,8 @@ About 50 digits of this expression shall be correct.
 The question remains how these digits can be saved for further treatment in R.
 Assigning it to an R variable will loose those digits when converting to 64-bit floats.
 
-------------------------------------------------------------------------
 
-## Loading datasets {#loading-datasets}
+## Loading datasets
 
 ### Retrieve R datasets
 
@@ -493,7 +492,7 @@ julia_command('head(planets)')
 │ 6   │ 0.25    │ 3.024   │ 0.02    │
 ```
 
-### CVS Files
+### CSV Files
 
 To read CSV files into Julia we utilize the [CSV]() package.
 
@@ -538,9 +537,8 @@ head(glass)
 And vice versa, to make an R dataframe be known in Julia we would use `julia_assign("glass", glass)`.
 The `glass` variable in Julia then points to the data structure in R and can be handled as a `DataFrame` in Julia.
 
-------------------------------------------------------------------------
 
-## Plotting Functionality {#plotting-functionality}
+## Plotting Functionality
 
 ### Using the 'Plots' package
 
@@ -588,9 +586,8 @@ The package [Gadfly](http://gadflyjl.org/stable/) implements 'Grammar of Graphic
 A sometimes more convenient way to plot functions or display images is to leave the heavy computation to Julia, retrieve the calculated values or coordinates to R, and do the plotting with R's plot functions.
 This may be especially appropriate if the figure shall be rendered in the plots pane of RStudio.
 
-------------------------------------------------------------------------
 
-## Application examples {#application-examples}
+## Application examples
 
 ### Linear Algebra
 
@@ -807,9 +804,8 @@ factorize(as.bigz(N))
 
 Of course, factorization can also be done in Julia after loading the *Primes* package, with `julia_eval("factor(BigInt(N))")`.
 
-------------------------------------------------------------------------
 
-## Differential Equations {#differential-equations}
+## Differential Equations
 
 ### The 'diffeqr' Package
 
@@ -1007,9 +1003,8 @@ This is plotted as a black, dotted line in the figure above.
 
 We can see that the approximate solution is oscillating slightly faster.
 
-------------------------------------------------------------------------
 
-## Optimization and JuMP {#optimization-and-jump}
+## Optimization and JuMP
 
 ### The 'Optim' package
 
@@ -1149,7 +1144,8 @@ julia_eval("getvalue(x)")
 
 ### Constraints: The 'NLopt' package
 
-------------------------------------------------------------------------
+TO DO!
+
 
 ## Appendix
 
