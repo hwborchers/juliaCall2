@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Hans W. Borchers, Duale Hochschule BW, Mannheim">
+<meta name="dcterms.date" content="2023-06-01">
+
+<title>JuliaCall: Integrating R and Julia</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="index_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap-0b66c2b3dd4dcbe81e0325d793f4e388.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
+  <ul class="collapse">
+  <li><a href="#installing-julia" id="toc-installing-julia" class="nav-link" data-scroll-target="#installing-julia">Installing Julia</a></li>
+  <li><a href="#installing-juliacall" id="toc-installing-juliacall" class="nav-link" data-scroll-target="#installing-juliacall">Installing JuliaCall</a></li>
+  </ul></li>
+  <li><a href="#using-juliacall" id="toc-using-juliacall" class="nav-link" data-scroll-target="#using-juliacall">Using JuliaCall</a>
+  <ul class="collapse">
+  <li><a href="#basic-juliacall-commands" id="toc-basic-juliacall-commands" class="nav-link" data-scroll-target="#basic-juliacall-commands">Basic JuliaCall Commands</a></li>
+  <li><a href="#the-julia-console" id="toc-the-julia-console" class="nav-link" data-scroll-target="#the-julia-console">The Julia Console</a></li>
+  <li><a href="#julia-packages" id="toc-julia-packages" class="nav-link" data-scroll-target="#julia-packages">Julia Packages</a></li>
+  <li><a href="#getting-help" id="toc-getting-help" class="nav-link" data-scroll-target="#getting-help">Getting Help</a></li>
+  </ul></li>
+  <li><a href="#computing-with-juliacall" id="toc-computing-with-juliacall" class="nav-link" data-scroll-target="#computing-with-juliacall">Computing With JuliaCall</a>
+  <ul class="collapse">
+  <li><a href="#numbers-vectors-matrices" id="toc-numbers-vectors-matrices" class="nav-link" data-scroll-target="#numbers-vectors-matrices">Numbers, Vectors, Matrices</a></li>
+  <li><a href="#julia-functions" id="toc-julia-functions" class="nav-link" data-scroll-target="#julia-functions">Julia Functions</a></li>
+  <li><a href="#more-function-magic" id="toc-more-function-magic" class="nav-link" data-scroll-target="#more-function-magic">More Function Magic</a></li>
+  </ul></li>
+  <li><a href="#loading-datasets" id="toc-loading-datasets" class="nav-link" data-scroll-target="#loading-datasets">Loading datasets</a>
+  <ul class="collapse">
+  <li><a href="#retrieve-r-datasets" id="toc-retrieve-r-datasets" class="nav-link" data-scroll-target="#retrieve-r-datasets">Retrieve R datasets</a></li>
+  <li><a href="#cvs-files" id="toc-cvs-files" class="nav-link" data-scroll-target="#cvs-files">CVS Files</a></li>
+  <li><a href="#transfering-dataframes" id="toc-transfering-dataframes" class="nav-link" data-scroll-target="#transfering-dataframes">Transfering dataframes</a></li>
+  </ul></li>
+  <li><a href="#plotting-functionality" id="toc-plotting-functionality" class="nav-link" data-scroll-target="#plotting-functionality">Plotting Functionality</a>
+  <ul class="collapse">
+  <li><a href="#using-the-plots-package" id="toc-using-the-plots-package" class="nav-link" data-scroll-target="#using-the-plots-package">Using the ‘Plots’ package</a></li>
+  <li><a href="#the-grammar-of-graphics" id="toc-the-grammar-of-graphics" class="nav-link" data-scroll-target="#the-grammar-of-graphics">The ‘Grammar of Graphics’</a></li>
+  <li><a href="#a-hybrid-approach" id="toc-a-hybrid-approach" class="nav-link" data-scroll-target="#a-hybrid-approach">A Hybrid Approach</a></li>
+  </ul></li>
+  <li><a href="#application-examples" id="toc-application-examples" class="nav-link" data-scroll-target="#application-examples">Application examples</a>
+  <ul class="collapse">
+  <li><a href="#linear-algebra" id="toc-linear-algebra" class="nav-link" data-scroll-target="#linear-algebra">Linear Algebra</a></li>
+  <li><a href="#nonlinear-regression" id="toc-nonlinear-regression" class="nav-link" data-scroll-target="#nonlinear-regression">Nonlinear Regression</a></li>
+  <li><a href="#automatic-differentiation" id="toc-automatic-differentiation" class="nav-link" data-scroll-target="#automatic-differentiation">Automatic Differentiation</a></li>
+  <li><a href="#special-functions" id="toc-special-functions" class="nav-link" data-scroll-target="#special-functions">Special Functions</a></li>
+  </ul></li>
+  <li><a href="#differential-equations" id="toc-differential-equations" class="nav-link" data-scroll-target="#differential-equations">Differential Equations</a>
+  <ul class="collapse">
+  <li><a href="#the-diffeqr-package" id="toc-the-diffeqr-package" class="nav-link" data-scroll-target="#the-diffeqr-package">The ‘diffeqr’ Package</a></li>
+  <li><a href="#odes-ordinary-des" id="toc-odes-ordinary-des" class="nav-link" data-scroll-target="#odes-ordinary-des">ODEs (Ordinary DEs)</a></li>
+  <li><a href="#systems-of-equations" id="toc-systems-of-equations" class="nav-link" data-scroll-target="#systems-of-equations">Systems of Equations</a></li>
+  <li><a href="#second-order-differential-equations" id="toc-second-order-differential-equations" class="nav-link" data-scroll-target="#second-order-differential-equations">Second-order Differential Equations</a></li>
+  </ul></li>
+  <li><a href="#optimization-and-jump" id="toc-optimization-and-jump" class="nav-link" data-scroll-target="#optimization-and-jump">Optimization and JuMP</a>
+  <ul class="collapse">
+  <li><a href="#the-optim-package" id="toc-the-optim-package" class="nav-link" data-scroll-target="#the-optim-package">The ‘Optim’ package</a></li>
+  <li><a href="#using-jump-and-ipopt" id="toc-using-jump-and-ipopt" class="nav-link" data-scroll-target="#using-jump-and-ipopt">Using ‘JuMP’ and ‘Ipopt’</a></li>
+  <li><a href="#constraints-the-nlopt-package" id="toc-constraints-the-nlopt-package" class="nav-link" data-scroll-target="#constraints-the-nlopt-package">Constraints: The ‘NLopt’ package</a></li>
+  </ul></li>
+  <li><a href="#appendix" id="toc-appendix" class="nav-link" data-scroll-target="#appendix">Appendix</a>
+  <ul class="collapse">
+  <li><a href="#timing" id="toc-timing" class="nav-link" data-scroll-target="#timing">Timing</a></li>
+  <li><a href="#links-and-references" id="toc-links-and-references" class="nav-link" data-scroll-target="#links-and-references">Links and References</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">JuliaCall: Integrating R and Julia</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Hans W. Borchers, <em>Duale Hochschule BW, Mannheim</em> </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 1, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>A short description of how to install JuliaCall and make use of Julia functions from R. Includes examples on plotting, for Optimization and Automatic Differentiation (AD), or calculating special functions not available in R.</p>
+<section id="installing-julia" class="level3">
+<h3 class="anchored" data-anchor-id="installing-julia">Installing Julia</h3>
+<p>We assume the user has installed a newer version of R, such as R &gt;= 4.3.1 (2023-06-16), and knows how to install R packages. Besides that, the user shall install Julia by himself. The latest stable version is Julia 1.9.1 (as of June 7, 2023) and can be downloaded from the Julia language home page <a href="https://julialang.org/">julialang.org</a> for the major operating systems Windows, macOS, and Linux.</p>
+<p>Some Julia packages will be needed. Though the <code>julia_setup</code> routine tries to install the necessary packages, it might be preferable to download and install some packages directly from Julia, and before Julia is called the first time from R.</p>
+<pre><code>&gt; julia
+   _       _ _(_)_     |  Documentation: https://docs.julialang.org
+  (_)     | (_) (_)    |
+   _ _   _| |_  __ _   |  Type "?" for help, "]?" for Pkg help.
+  | | | | | | |/ _` |  |
+  | | |_| | | | (_| |  |  Version 1.9.1 (2023-06-07)
+ _/ |\__'_|_|_|\__'_|  |  Official https://julialang.org/ release
+|__/                   |
+
+julia&gt;</code></pre>
+<p>After loading the <em>Pkg</em> package with <code>using Pkg</code>, the command <code>Pkg.add()</code> will download and install Julia packages (in the <code>.julia</code> subdirectory of your home directory) once, and <code>using &lt;pkg&gt;</code> will load these into the active session, just like <code>library()</code> in R. For instance, <em>RCall</em> will enable Julia to call R routines or get access to R objects.</p>
+<p>To be used, <em>Pkg</em> itself needs to be loaded with <code>using Pkg</code>, and then type <code>Pkg.add("RCall")</code>. It is easier to apply the ‘]’ operator that will change the console mode to accept package commands. This mode will be left by pressing the <code>&lt;del&gt;</code> key.</p>
+<pre><code>julia&gt; ]
+(@v1.8) pkg&gt; add RCall
+## Updating ...
+(@v1.8) pkg&gt; &lt;del&gt;
+
+julia&gt; using RCall
+julia&gt; ...</code></pre>
+<p>There is also a help mode that can be raised by typing the question mark <code>?</code>. (This works in ‘package mode’ as well, that is with ‘pkg&gt; ?’.)</p>
+</section>
+<section id="installing-juliacall" class="level3">
+<h3 class="anchored" data-anchor-id="installing-juliacall">Installing JuliaCall</h3>
+<p><em>JuliaCall</em> is an R package, available on CRAN, by Changcheng Li. We would recommend to always install the newest version of <em>JuliaCall</em> from Github. The <em>devtools</em> R package provides the <code>install_github()</code> routine to do that for us if we know the name of the Github repository.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># devtools::install_github("Non-Contradiction/JuliaCall")</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># JuliaCall | Version 0.17.5 (2022-09-08) | MIT + file LICENSE</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(JuliaCall)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_setup</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This only works if the <code>julia</code> command is defined in your path. The path, e.g., to a different Julia version can be added to <code>julia_setup()</code> as an option or argument. The following code starts a Julia installation at a different location.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">JULIA_HOME =</span> <span class="st">"~/Programs/julia-1.8.5/bin/"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_setup</span>()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="do">## Julia version 1.8.5 at location ~/Programs/julia-1.8.5/bin will be used.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="do">## Loading setup script for JuliaCall...</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="do">## Finish loading setup script for JuliaCall.</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># or</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># julia_setup(JULIA_HOME = "~/Programs/julia-1.8.5/bin/")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>All commands in <em>JuliaCall</em> start with a <code>julia_</code> prefix. It is also possible to call these commands with a <code>jl$</code> prefix by assigning the setup command to the variable <code>jl</code> (or any other valid name) with <code>jl &lt;- julia_setup()</code> – if the user prefers that kind of style.</p>
+<p>
+&nbsp;
+</p>
+</section>
+</section>
+<section id="using-juliacall" class="level2">
+<h2 class="anchored" data-anchor-id="using-juliacall">Using JuliaCall</h2>
+<section id="basic-juliacall-commands" class="level3">
+<h3 class="anchored" data-anchor-id="basic-juliacall-commands">Basic JuliaCall Commands</h3>
+<p>To check whether Julia is working from R, type in a simple command such as calling the Julia square root funtion on 2.0 by applying <code>julia_call()</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"sqrt"</span>, <span class="fl">2.0</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 1.414214</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here the Julia square root function <code>sqrt</code> is applied to the number <code>2.0</code>. The argument is taken from R and converted to a Julia object, a number in this case, before applying the square root. The value is returned to R as an R object and can be assigned to a variable. In this variant, no values or variables are generated in Julia.</p>
+<p>To execute a Julia command use <code>julia_command</code>. It can run a series of Julia commands, separated by semicolons and will, or will not, print the last Julia output, depending on whether a semicolon is appended to the last command, or not.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"a = sqrt(2.0)"</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 1.4142135623730951</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"a = sqrt(2.0);"</span>)   <span class="co"># no output printed</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The Julia variable <code>a</code> will be generated and the Julia output of the last command will be printed on the console. To completely suppress the output, append a semicolon. <code>julia_command</code> does <em>not</em> return a value to R – more to the point, <code>NULL</code> is returned invisibly.</p>
+<p>To get the value of a Julia variable back to R, use the <code>julia_eval</code> command. It will convert the value or Julia object to an R object and print it or assign it to an R variable.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"a = sqrt(2.0)"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 1.414214</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>You can apply <code>julia_eval</code> on a sequence of Julia expression, separating commands with semicolons <code>;</code>. The value of the last command will be returned, whether there is a semicolon at the end or not.</p>
+<p>(To explain this subtle difference in other words: <code>julia_command</code> will print the Julia output and return nothing, <code>julia_eval</code> will return and print the result as an R object.)</p>
+<p>Finally, there is <code>julia_assign</code>, another useful operator. It takes an R object like a number, vector, matrix, etc., turns it into a Julia object and assigns a variable name to it. This variable can then be used in subsequent Julia commands.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"gamma"</span>, <span class="fl">0.57721566490153286</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"bitstring(gamma)"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="do">## "0011111111100010011110001000110011111100011011111011011000011001"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In Julia, this will assign to the variable name <code>gamma</code> the value of the Euler-Mascheroni or Gamma constant. Function <code>bitstring</code> prints the “literal bit representation” of <code>gamma</code> as a number in Julia.</p>
+<p>A note about variable names: It is convenient to give an assigned variable the same name in R as in Julia. There is no danger that these two variables will interfere as they exist in different environments. We will largely follow this policy here.</p>
+</section>
+<section id="the-julia-console" class="level3">
+<h3 class="anchored" data-anchor-id="the-julia-console">The Julia Console</h3>
+<p>It is possible to start the Julia REPL within R with the <code>julia_console()</code> command. The variable <code>a</code> is still available.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_console</span>()</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="do">## It seems that you are not in the terminal.</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="do">## A simple julia console will be started.</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="do">## Type exit and then enter to exit.</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>julia<span class="sc">&gt;</span> a<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fl">2.0000000000000004</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>julia<span class="sc">&gt;</span> e <span class="ot">=</span> <span class="fu">exp</span>(<span class="dv">1</span>);</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>julia<span class="sc">&gt;</span> <span class="er">&lt;</span>cntrl<span class="sc">-</span>D<span class="sc">&gt;</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>Exiting Julia console.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Exit with <code>&lt;cntrl-D&gt;</code> returns control to the R command. Note again that in Julia the output of a command such as <code>e = exp(1)</code> is suppressed by appending a semicolon (as in MATLAB or Octave). <code>e</code> still exists and can be used in R.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_exists</span>(<span class="st">"e"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="cn">TRUE</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">julia_eval</span>(<span class="st">"e"</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>e</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 2.718282</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>julia_console</code> functionality is especially useful when you have some knowledge about programming in Julia. Writing Julia code is much easier in this environment, and when exiting the results are still available in R.</p>
+</section>
+<section id="julia-packages" class="level3">
+<h3 class="anchored" data-anchor-id="julia-packages">Julia Packages</h3>
+<p>The user can start Julia and install and load packages. After restarting R and the <em>JuliaCall</em> library, these packages are available. It is also possible to install and load Julia libraries with <em>JuliaCall</em> functions.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># julia_install_package("Optim")            # julia&gt; Pkg.add("Optim")</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># julia_install_package_if_needed("Optim")</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_installed_package</span>(<span class="st">"Optim"</span>)            <span class="co"># Optim version number</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] "1.7.4"                              # latest update 2022</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"Optim"</span>)                      <span class="co"># julia&gt; using Optim</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>julia_library()</code> command will load an installed package, that is, in Julia the command <code>using Optim</code> will be initiated. (Note that all Julia package names start with a capital letter.)</p>
+<p>Be prepared that this may take its time as loading libraries may be slow in Julia, especially if the package is newly installed and has to be precompiled (JIT compilation).</p>
+<p>Some packages worth looking at are:</p>
+<ul>
+<li><strong>Plots</strong> for visualization and data analysis;</li>
+<li><strong>DifferentialEquations</strong> with high-performance solvers for differential equations;</li>
+<li><strong>Zygote</strong> or <strong>Enzyme</strong> providing Automatic Differentiation (AD) in Julia;</li>
+<li><strong>JuMP</strong>, a modeling language for mathematical optimization;</li>
+<li><strong>Image</strong>, an image processing library;</li>
+<li><strong>GLM</strong> for generalized and linear models; or</li>
+<li><strong>DataFrames</strong> for working with tabular data.</li>
+</ul>
+<p>The <strong>GR</strong> package provides a framework, based on the “Grammar of Graphics”, for visualisation applications. Several packages exist for deep learning (<strong>Mocha</strong>, <strong>Flux</strong>, <strong>Knet</strong>, <strong>MXNet</strong>, <strong>TensorFlow</strong>, etc.). See the <a href="https://juliapackages.com/">Julia Packages</a> for some of the highest-ranked packages, listed by categories.</p>
+</section>
+<section id="getting-help" class="level3">
+<h3 class="anchored" data-anchor-id="getting-help">Getting Help</h3>
+<p>To get help for a Julia function use <code>julia_help()</code>. The quality of help in Julia is quite diverse, some functions have virtually no documentation (yet), others are documented quite well. The result of <code>julia_help("sqrt")</code> is</p>
+<pre><code>sqrt(x)
+
+Return $\sqrt{x}$. Throws [`DomainError`](@ref) for negative [`Real`](@ref) arguments.
+Use complex negative arguments instead.
+The prefix operator `\sqrt` is equivalent to `sqrt`.
+...</code></pre>
+<p>This explains that <code>sqrt(-1)</code> will result in an error in Julia (<code>NA</code> in R). The imaginary unit in Julia is <code>im</code> so the correct call will be</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"sqrt(-1+0im)"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0+1i</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The Julia complex number <code>1im</code> has been converted to the R representation <code>1i</code>. (In Julia an expression “a number times a variable” <code>5*x</code> can also be written as shorthand <code>5x</code>.)</p>
+<p>In general, reading help for Julia functions through the <code>julia_help()</code> interface is not recommended as some of the formatting is lost and the help is difficult to read. Instead, read the newest documentation on <a href="https://docs.julialang.org/en/">docs.julialang.org</a>, or open a terminal where Julia runs and look at the help page there.</p>
+<hr>
+</section>
+</section>
+<section id="computing-with-juliacall" class="level2">
+<h2 class="anchored" data-anchor-id="computing-with-juliacall">Computing With JuliaCall</h2>
+<section id="numbers-vectors-matrices" class="level3">
+<h3 class="anchored" data-anchor-id="numbers-vectors-matrices">Numbers, Vectors, Matrices</h3>
+<p>We have already seen simple commands for interacting between R and Julia. <code>julia_eval()</code> and <code>julia_command()</code> evaluate a string containing a correct Julia expression and return the result to R. <code>julia_call()</code> accepts a Julia function name as string plus R variables and returns the result when applying the function in Julia. And <code>julia_assign</code> converts an R object and makes it accessible to Julia functions.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1001</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">runif</span>(<span class="dv">9</span>), <span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"a"</span>, A)    <span class="co"># assign a Julia name to an R variable</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_exists</span>(<span class="st">"a"</span>)       <span class="co"># variable 'a' exists in Julia</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="do">## TRUE</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"typeof"</span>, a) <span class="co"># what is the type of object 'a'?</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="do">## Julia Object of type DataType.</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="do">## Float64</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"det(a)"</span>)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0.01609354</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Numbers in R like <code>1</code> or <code>1.0</code> are floating point and will be converted with <code>julia_assign()</code> to floating point numbers in Julia. If a Julia function requires natural numbers as arguments, think of defining them in R with the ‘L’ notation.</p>
+<p>For instance, generate 10 random numbers with</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"rand"</span>, <span class="dv">10</span>L)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0.8045609 ...</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>while <code>julia_call("rand", 10)</code> will throw an error – with quite a long error message. Again, <code>julia_eval("rand(10)")</code> would be okay, as in Julia <code>10</code> is an integer and not equal to the floating-point number <code>10.0</code>.</p>
+<p>Vectors and matrices in R are transformed to vectors and matrices of the same length and dimension in Julia. We will solve a system of linear equations in Julia, taking vector and matrix from R. For simplicity, take the same variable names in R and Julia.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">1.5</span>,<span class="dv">2</span>,<span class="sc">-</span><span class="dv">4</span>, <span class="dv">2</span>,<span class="sc">-</span><span class="dv">1</span>,<span class="sc">-</span><span class="dv">3</span>, <span class="sc">-</span><span class="dv">4</span>,<span class="sc">-</span><span class="dv">3</span>,<span class="dv">5</span>), <span class="dv">3</span>, <span class="dv">3</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"A"</span>, A)            <span class="co"># same var names in R and Julia</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"b"</span>, b)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"x = A</span><span class="sc">\\</span><span class="st">b;"</span>)      <span class="co"># solve the system with `\`</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"x"</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] -1.739130 -1.108696 -1.456522</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We apply the <code>\</code> operator in Julia that solves the linear system, the same as in MATLAB. Backslash being the escape character, we have to double it in a string.</p>
+</section>
+<section id="julia-functions" class="level3">
+<h3 class="anchored" data-anchor-id="julia-functions">Julia Functions</h3>
+<p>Of course, all the common mathematical functions are available in Julia, like trigonometric or exponential functions or logarithms, etc.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"sin(pi/2)"</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We have to be careful about applying Julia functions to vectors (or matrices, etc.) because these functions are <em>not</em> vectorized by default. Instead, we can use the <em>dot</em> notation of Julia. If <code>f</code> is a function, then for a vector <code>x</code> the expression <code>f.(x)</code> will <em>broacast</em> the function over the vector, that is apply it to each element of the vector and generate a vector of results.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"x = [0, pi/4, pi/2, pi];"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"sin(x)"</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="do">## Error: Error happens in Julia.</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="do">## MethodError: no method matching sin(::Array{Float64,1})</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"sin.(x)"</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.000000e+00</span> <span class="fl">7.071068e-01</span> <span class="fl">1.000000e+00</span> <span class="fl">1.224647e-16</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here we use the Julia notation for explicitly generating a vector with <code>[...]</code>, a MATLAB-like notation, corresponding to R’s <code>c(...)</code>. By the way, applying <code>sin.</code> with <code>julia_call</code> to an R vector will act in a vectorized way.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"sin."</span>, <span class="fu">c</span>(<span class="dv">0</span>, pi<span class="sc">/</span><span class="dv">4</span>, pi<span class="sc">/</span><span class="dv">2</span>, pi))</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.000000e+00</span> <span class="fl">7.071068e-01</span> <span class="fl">1.000000e+00</span> <span class="fl">1.224647e-16</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>julia_assign()</code> lets you also associate Julia names with R functions, that is functions in Base R or packages, or user-defined functions. As an example, we will define the Runge function in R and integrate that function with a Julia integration routine.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fRunge <span class="ot">=</span> <span class="cf">function</span>(x) <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> (<span class="dv">5</span><span class="sc">*</span>x)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">integrate</span>(fRunge, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="do">## 0.5493603 with absolute error &lt; 2.1e-06</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>To make this function callable in Julia we have to tell Julia where to find and how to call the R function. Let us give it the same variable name <code>fRunge</code>, that is</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"fRunge"</span>, fRunge)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"fRunge"</span>, <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">-</span><span class="dv">0-5</span>, <span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0.03846154 0.13793103 1.00000000 0.13793103 0.03846154</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"fRunge([-1.0, -0.5, 0, 0.5, 1.0])"</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0.03846154 0.13793103 1.00000000 0.13793103 0.03846154</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Surprisingly, as a Julia function <code>jlRunge</code> is vectorized, we can apply it to vectors without involving the ‘dot’ notation. The reason is that behind the scenes we are calling an R function that <em>is</em> vectorized. (But applying the ‘dot’ notation would also deliver the correct result.)</p>
+<p>We want to integrate this function applying the Gauss-Kronrod integration routine in Julia. For this the <em>QuadGK</em> package is needed (and needs to be installed).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># julia_install_package("QuadGK")</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"QuadGK"</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"I, err = quadgk(jlRunge, -1, 1);"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"[I, err]"</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 5.493603e-01 1.058539e-09</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>(Besides, <code>I, err = ...</code> is an example of “multiple return values”, a concept taken from Python.)</p>
+<p>We could have defined the Runge function in Julia directly. As a function it is a one-liner, a shorthand notation for such cases is available in Julia by simply formulating it in its mathematical form <code>f(x) = ...</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"runge(x) = 1 / (1 + (5*x)^2)"</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="do">## runge (generic function with 1 method)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>One note of caution. Our new function <code>runge</code> is <em>not</em> vectorized: Applying it to a vector <code>[-1.0, -0.5, 0, 0.5, 1.0]</code> will raise a <code>MethodError</code>.</p>
+<p>Now we can integrate it as a pure Julia function (Integration routines in Julia do not request the integrand to be vectorized.)</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"I, err = quadgk(runge, -1, 1)"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="do">## (0.5493603067780064, 1.0585390480821744e-9)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Functions without an associated variable names, so-called ‘anonymous functions’, are defined with the <code>-&gt;</code> operator, similar to one-liner functions. Instead of defining <code>runge</code>, integrate it as an anonymous function.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"I, err = quadgk(x -&gt; 1/(1 + (5*x)^2), -1, 1)"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="do">## (0.5493603067780064, 1.0585390480821744e-9)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Function definition in Julia can be quite elaborated and has many options (like keywords, type definitions for function input and output, etc.). The two possible syntaxes described in this section are often sufficient for getting computational results back in R.</p>
+</section>
+<section id="more-function-magic" class="level3">
+<h3 class="anchored" data-anchor-id="more-function-magic">More Function Magic</h3>
+<p>Imagine there is a file <code>miscellaneous.jl</code> in the working directory that contains the following definition of a function in Julia. This <code>agm</code> function calculates the algebraic-geometric mean of two numbers <code>a</code> and <code>b</code>.</p>
+<pre><code>function agm(a, b; tol = 1.0e-15)
+    a0 = a; b0 = b
+    while abs(b0-a0) &gt;= tol
+        a0, b0 = (a0 + b0)/2.0, sqrt(a0 * b0)
+    end
+    return (a0 + b0) / 2.0
+end</code></pre>
+<p>(The argument <code>tol</code> after the semicolon is actually a <em>keyword</em> argument and will be treated slightly different. The arguments before the semicolon, whether they have default values or not, have to be provided in the sequence they are seen in the function definition.)</p>
+<p>With <code>julia_source()</code> we can source this file in to Julia. Julia will JIT-compile it and make it available for the user.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_source</span>(<span class="st">"miscellaneous.jl"</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_exists</span>(<span class="st">"agm"</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="cn">TRUE</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For instance, <code>1/agm(1, sqrt(2.0)</code> is the so-called <em>Gauss constant</em> and has an important relation to elliptic integrals.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>G <span class="ot">=</span> <span class="dv">1</span> <span class="sc">/</span> <span class="fu">julia_call</span>(<span class="st">"agm"</span>, <span class="fl">1.0</span>, <span class="fu">sqrt</span>(<span class="fl">2.0</span>))</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(G, <span class="at">digits=</span><span class="dv">16</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 0.8346268416740731</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Or</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"1.0 / agm(1.0, sqrt(2.0); tol = 1e-12)"</span>)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="fl">0.8346268416740731</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>(The keyword argument <code>tol</code> cannot be provided with <code>julia_call</code> as the semicolon would stop the R command.)</p>
+<p>The <code>agm</code> function, calculated through an iteration, is not vectorized, that is the expression <code>agm(1, [0.5, 1.0, 1.5]</code> will not work out. Julia will tell us “no method matching agm(::Int64, ::Array{Float64,1})”. Instead, we can use the <em>dot</em> notation of Julia.</p>
+<pre><code>julia_command("agm.(1, [0.5, 1.0, 1.5])")
+## 3-element Array{Float64,1}:
+##  0.7283955155234534
+##  1.0     
+##  1.237340218118152</code></pre>
+<p>Julia provides the ability to do calculations with multi-precision numbers, based on the MPFR software program, which is also used by R’s <em>Rmpfr</em> and <em>gmp</em> packages. Our <code>agm</code> function accepts these <code>Bigfloat</code> numbers as it only employs arithmetical operations.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"b1 = BigFloat(1.0); b2 = BigFloat(2.0);"</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"G = 1 / agm(b1, sqrt(b2), tol = 1e-50)"</span>)</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="do">## 0.8346268416740731862814297327990468089939</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="do">##    930134903470024498273701036819927095195</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>About 50 digits of this expression shall be correct. The question remains how these digits can be saved for further treatment in R. Assigning it to an R variable will loose those digits when converting to 64-bit floats.</p>
+<hr>
+</section>
+</section>
+<section id="loading-datasets" class="level2">
+<h2 class="anchored" data-anchor-id="loading-datasets">Loading datasets</h2>
+<section id="retrieve-r-datasets" class="level3">
+<h3 class="anchored" data-anchor-id="retrieve-r-datasets">Retrieve R datasets</h3>
+<p>Many datasets known from R Base and packages are available through the <a href="https://github.com/JuliaStats/RDatasets.jl">RDatasets</a> package in Julia. Most of the standard datasets in Base R as well as those included with popular R packages are available.</p>
+<p><code>RDatasets.packages()</code> will show a table of R packages considered, and <code>RDatasets.datasets()</code> a table of the 700+ datasets included. The prefix <code>RDatasets</code> is needed as these functions are not exported (but <code>dataset</code> is). Pass in <code>RDatasets.datasets("HSAUR")</code> to receive a targeted table for the <em>HSAUR</em> package (first edition).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"using DataFrames, RDatasets"</span>)  <span class="co"># julia_library(...)</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'planets = dataset("HSAUR", "planets");'</span>)</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'typeof(planets)'</span>)</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="do">## DataFrame</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'head(planets)'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>6×3 DataFrame
+│ Row │ Mass    │ Period  │ Eccen   │
+│     │ Float64 │ Float64 │ Float64 │
+├─────┼─────────┼─────────┼─────────┤
+│ 1   │ 0.12    │ 4.95    │ 0.0     │
+│ 2   │ 0.197   │ 3.971   │ 0.0     │
+│ 3   │ 0.21    │ 44.28   │ 0.34    │
+│ 4   │ 0.22    │ 75.8    │ 0.28    │
+│ 5   │ 0.23    │ 6.403   │ 0.08    │
+│ 6   │ 0.25    │ 3.024   │ 0.02    │</code></pre>
+</section>
+<section id="cvs-files" class="level3">
+<h3 class="anchored" data-anchor-id="cvs-files">CVS Files</h3>
+<p>To read CSV files into Julia we utilize the <a href="">CSV</a> package.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'using CSV, DataFrames'</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'glass_csv = CSV.File("glass.csv");'</span>)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'typeof(glass_csv)'</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="do">## CSV.File{false}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The return type/class of <code>CSV.File()</code> is <em>not</em> a data frame, so we still have to convert it with the help of the <a href="">DataFrames</a> package. Here we also introduce the <em>pipe</em>-operator of Julia.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'glass_df = glass_csv |&gt; DataFrame;'</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'typeof(glass_df)'</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="do">## DataFrame</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="transfering-dataframes" class="level3">
+<h3 class="anchored" data-anchor-id="transfering-dataframes">Transfering dataframes</h3>
+<p>To transfer the ‘glass’ data to R we simple use the <code>julia_eval()</code> function.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>glass <span class="ot">&lt;-</span> <span class="fu">julia_eval</span>(<span class="st">"glass_df"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(glass)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="do">## "data.frame"</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(glass)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>      row      RI    Na   Mg   Al    Si    K   Ca Ba   Fe Type
+1   1 1.52101 13.64 4.49 1.10 71.78 0.06 8.75  0 0.00    1
+2   2 1.51761 13.89 3.60 1.36 72.73 0.48 7.83  0 0.00    1
+3   3 1.51618 13.53 3.55 1.54 72.99 0.39 7.78  0 0.00    1
+4   4 1.51766 13.21 3.69 1.29 72.61 0.57 8.22  0 0.00    1
+5   5 1.51742 13.27 3.62 1.24 73.08 0.55 8.07  0 0.00    1
+6   6 1.51596 12.79 3.61 1.62 72.97 0.64 8.07  0 0.26    1</code></pre>
+<p>And vice versa, to make an R dataframe be known in Julia we would use <code>julia_assign("glass", glass)</code>. The <code>glass</code> variable in Julia then points to the data structure in R and can be handled as a <code>DataFrame</code> in Julia.</p>
+<hr>
+</section>
+</section>
+<section id="plotting-functionality" class="level2">
+<h2 class="anchored" data-anchor-id="plotting-functionality">Plotting Functionality</h2>
+<section id="using-the-plots-package" class="level3">
+<h3 class="anchored" data-anchor-id="using-the-plots-package">Using the ‘Plots’ package</h3>
+<p>At the moment the behavior of Julia plotting routines through JuliaCall appears to be slightly different for the operating systems Windows, macOs, and Linux. I will shortly describe the Linux case. All this may not work for you if you are working with RStudio.</p>
+<p>We will utilize the Julia <a href="https://docs.juliaplots.org/latest/">Plots</a> package that integrates several plotting packages under one common API. We have to prepare:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">'ENV["GKSwstype"] = "gksqt"'</span>)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="co"># plotsViewer()</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"using Plots"</span>)</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"gr()"</span>)         <span class="co"># or: gr(), plotly(), pyplot()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>plotsViewer()</code> function should tell Julia to do two things for plots: the first is to save the image to some temporary place, and the second is to use R’s or the operating system’s browser to view the image. [Unfortunately, at the moment it is not working correctly on macOS.]</p>
+<p>Note that the <code>julia_command('ENV["GKSwstype"]="gksqt";')</code> activates the GKS QT backend, and may or may not be necessary. If it is necessary, it needs to be executed before loading the plotting library to take effect.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"Plots.plot(Plots.fakedata(50,4),w=3)"</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="co"># julia_command("gui()")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fakedata.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Figure 1</strong> : Fakedata plot with GR</figcaption>
+</figure>
+</div>
+<p>This uses the <a href="https://gr-framework.org/">GR</a> framework that is the default <em>backend</em> and can be reinstantiated with <code>gr()</code>. If no window pops up or is rendered in RStudio’s viewer panel, the command <code>gui()</code> should open an external plotting window.</p>
+<p>The <code>plotly()</code> backend (see <a href="https://plotly.com/julia/">Plotly</a>) may be easier to handle as it will open the plot in a browser of the operating system. Also <code>pyplot()</code> (see <a href="https://github.com/JuliaPy/PyPlot.jl">PyPlot</a>) works quite well and renders in the viewer pane. (See <a href="https://docs.juliaplots.org/latest/backends/">Backends</a> for more ‘backends’.)</p>
+</section>
+<section id="the-grammar-of-graphics" class="level3">
+<h3 class="anchored" data-anchor-id="the-grammar-of-graphics">The ‘Grammar of Graphics’</h3>
+<p>The package <a href="http://gadflyjl.org/stable/">Gadfly</a> implements ‘Grammar of Graphics’ plotting functionality for Julia, quite similar to what <em>ggplot2</em> does for R.</p>
+</section>
+<section id="a-hybrid-approach" class="level3">
+<h3 class="anchored" data-anchor-id="a-hybrid-approach">A Hybrid Approach</h3>
+<p>A sometimes more convenient way to plot functions or display images is to leave the heavy computation to Julia, retrieve the calculated values or coordinates to R, and do the plotting with R’s plot functions. This may be especially appropriate if the figure shall be rendered in the plots pane of RStudio.</p>
+<hr>
+</section>
+</section>
+<section id="application-examples" class="level2">
+<h2 class="anchored" data-anchor-id="application-examples">Application examples</h2>
+<section id="linear-algebra" class="level3">
+<h3 class="anchored" data-anchor-id="linear-algebra">Linear Algebra</h3>
+<p>The <em>Moler matrix</em> is a symmetric matrix with exactly one very small eigenvalue. It is well suited for testing eigenvalue computations. In R a Moler matrix of size <code>nxn</code> can be generated through the <em>pracma</em> function <code>moler(n)</code>. Let’s try to find out its small eigenvalue for dimension <code>n=100</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>M <span class="ot">&lt;-</span> pracma<span class="sc">::</span><span class="fu">moler</span>(<span class="dv">100</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>M</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="do">##        [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] ...</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="do">##   [1,]    1   -1   -1   -1   -1   -1   -1   -1   -1    -1 ...</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="do">##   [2,]   -1    2    0    0    0    0    0    0    0     0 ...</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="do">##   [3,]   -1    0    3    1    1    1    1    1    1     1 ...</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="do">##  ...</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="do">## [100,]   -1    0    1    2    3    4    5    6    7     8 ...</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>( e <span class="ot">&lt;-</span> <span class="fu">eigen</span>(M)<span class="sc">$</span>values )</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a><span class="do">##  [1] 3.934277e+03 4.390118e+02 1.593905e+02 8.235182e+01  ...</span></span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a><span class="do">## [97] 2.250558e+00 2.250248e+00 2.250062e+00 5.473381e-14</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This last small eigenvalue is certainly incorrect – but how much? Knowing that the determinant of a Moler matrix is 1 and assuming all the bigger eigenvalues are calculated correctly, an estimate for the smallest eigenvalue would be</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fl">1.0</span><span class="sc">/</span><span class="fu">prod</span>(e[<span class="dv">1</span><span class="sc">:</span><span class="dv">99</span>]), <span class="at">digits=</span><span class="dv">16</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 5.600713750073471e-60</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Changing <code>M</code> with <em>Rmpfr</em> to a high-precision object does not help, as <code>eigen()</code> does not recognize multiple precision numbers. But also Julia’s <code>eigvals()</code> function does not work with “big” numbers, it returns the same eigenvalues as above.</p>
+<p>Instead, we make use of the function with the same name from the <em>GenericLinearAlgebra</em> Julia package. First we assign the Julia variable <code>M</code> to our matrix <code>M</code> in R, then convert it to a matrix of “big” numbers and apply the eigenvalue function.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>    <span class="fu">julia_command</span>(<span class="st">"using GenericLinearAlgebra;"</span>)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">julia_assign</span>(<span class="st">"M"</span>, M)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">julia_command</span>(<span class="st">"e = eigvals(Hermitian(big.(M)));"</span>)</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">julia_command</span>(<span class="st">"println(e[1])"</span>)</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>    <span class="do">## 5.60071375007503416508581022876389348658607158043730...e-60</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is really a small eigenvalue, especially compared to the other eigenvalues of this matrix. We can see that the estimated eigenvalue above (knowing the determinant of the Moler matrix) was exact up to 12 digits.</p>
+</section>
+<section id="nonlinear-regression" class="level3">
+<h3 class="anchored" data-anchor-id="nonlinear-regression">Nonlinear Regression</h3>
+<p>The following example is a well-known test example for nonlinear regression. The goal is to adapt the parameters of a model function to given data in a ‘sum-of-squares’ meaning.</p>
+<p>The radioactive radiation of a sample containing three different radioactive decay products is measured. The aim is to determine the half-lives and thus to uncover the different substances in the probe.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">#   Lanczos1 data (artificial data)</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   f(x) = 0.0951*exp(-x) + 0.8607*exp(-3*x) + 1.5576*exp(-5*x)</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fl">1.15</span>, <span class="at">length.out =</span> <span class="dv">24</span>)</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">2.51340000</span>, <span class="fl">2.04433337</span>, <span class="fl">1.66840444</span>, <span class="fl">1.36641802</span>, <span class="fl">1.12323249</span>, <span class="fl">0.92688972</span>,</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>       <span class="fl">0.76793386</span>, <span class="fl">0.63887755</span>, <span class="fl">0.53378353</span>, <span class="fl">0.44793636</span>, <span class="fl">0.37758479</span>, <span class="fl">0.31973932</span>,</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>       <span class="fl">0.27201308</span>, <span class="fl">0.23249655</span>, <span class="fl">0.19965895</span>, <span class="fl">0.17227041</span>, <span class="fl">0.14934057</span>, <span class="fl">0.13007002</span>,</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>       <span class="fl">0.11381193</span>, <span class="fl">0.10004156</span>, <span class="fl">0.08833209</span>, <span class="fl">0.07833544</span>, <span class="fl">0.06976694</span>, <span class="fl">0.06239313</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For the data see Figure 3 below.</p>
+<p>We want to solve this using a Julia implementation of the Levenberg-Marquardt algorithm, available in the Julia package ‘LsqFit’.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"LsqFit"</span>)  <span class="co"># using LsqFit</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"x"</span>, x)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"y"</span>, y)</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"p0"</span>, <span class="fu">c</span>(<span class="fl">1.0</span>, <span class="fl">1.0</span>, <span class="fl">1.0</span>, <span class="fl">1.0</span>, <span class="fl">1.0</span>, <span class="fl">1.0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The measurement data are now known within the Julia sub-process. We create the functional model (the sum of three independent decay functions) in Julia and call the nonlinear fitting procedure.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"@. model(x, p) = p[1]*exp(-p[2]*x) + p[3]*exp(-p[4]*x) + p[5]*exp(-p[6]*x);"</span>)</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"fit = curve_fit(model, x, y, p0);"</span>)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>p <span class="ot">=</span> <span class="fu">julia_eval</span>(<span class="st">"fit.param"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>[1] 0.86069977 2.99999779 1.55760080 4.99999966 0.09509943 0.99999658</code></pre>
+<p>We see the half lives in <code>p[c(2,4,6)]</code> are about 3, 5, and 1. The data and the fitted model curve are shown in the following figure.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="lanczos.png" class="img-fluid figure-img"></p>
+<figcaption><strong>Figure 3</strong> : Nonlinear regression example</figcaption>
+</figure>
+</div>
+<p>How good the accuracy of this solution is can best be seen by calculating the “sum of squares” of the residuals.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>((p[<span class="dv">1</span>]<span class="sc">*</span><span class="fu">exp</span>(<span class="sc">-</span>p[<span class="dv">2</span>]<span class="sc">*</span>x) <span class="sc">+</span> p[<span class="dv">3</span>]<span class="sc">*</span><span class="fu">exp</span>(<span class="sc">-</span>p[<span class="dv">4</span>]<span class="sc">*</span>x) <span class="sc">+</span> p[<span class="dv">5</span>]<span class="sc">*</span><span class="fu">exp</span>(<span class="sc">-</span>p[<span class="dv">6</span>]<span class="sc">*</span>x) <span class="sc">-</span> y)<span class="sc">^</span><span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>[1] 1.230944e-16</code></pre>
+<p>This is reasonably good and probably cannot be improved in “double float” arithmetic. However, NIST requires an accuracy of <code>1e-24</code> !</p>
+</section>
+<section id="automatic-differentiation" class="level3">
+<h3 class="anchored" data-anchor-id="automatic-differentiation">Automatic Differentiation</h3>
+<p><em>Automatic Differentiation</em> is a “technique to numerically compute the derivative of a function specified by a computer program”. Julia provides several approaches (forward, backward, …) to automatic differentiation. Of course, these approaches cannot be applied to functions not defined in Julia or C functions integrated into Julia.</p>
+<p>When we define a, maybe simple, function in R, then we can use this functionality in Julia and return results to R. As an example we will compute the exact hessian (within 64-bit floating point arithmetic) of the Rosenbrock function. For this we need to define this test function in Julia (by converting some R code).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"# Rosenbrock function in Julia</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="st">function rosen(x::Vector)</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="st">    local n = length(x); local s = 0.0</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="st">    for i = 1:length(x)-1</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a><span class="st">        s += 100*(x[i+1] - x[i]^2)^2 + (x[i] - 1)^2</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="st">    end</span></span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a><span class="st">    return s</span></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a><span class="st">end"</span>)</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a><span class="do">## rosen (generic function with 1 method)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We want to calculate the exact Hessian at <span class="math inline">\(x = (0.95, 0.95, 0.95, 0.95)\)</span> applying automatic forward differentiation. This is available as function <code>hessian</code> in the <em>ForwardDiff</em> package. Note that this package does not export its functions by intention, so we need to use the longer form <code>ForwardDiff.hessian</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_installed_package</span>(<span class="st">"ForwardDiff"</span>)</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] "0.5.0"</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"ForwardDiff"</span>)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>H1 <span class="ot">=</span> <span class="fu">julia_eval</span>(<span class="st">"ForwardDiff.hessian(rosen, 0.95*ones(4));"</span>)</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>H1</span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a><span class="do">##      [,1] [,2] [,3] [,4]</span></span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a><span class="do">## [1,]  705 -380    0    0</span></span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a><span class="do">## [2,] -380  905 -380    0</span></span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a><span class="do">## [3,]    0 -380  905 -380</span></span>
+<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a><span class="do">## [4,]    0    0 -380  200</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Let us compare this with the Hessian computed in R using the finite-difference approach such as in <em>numDeriv</em>. Actually, <em>numDeriv</em> refines the finite-difference result by applying a Richardson extrapolation, thus should be quite exact.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">=</span> adagio<span class="sc">::</span>fnRosenbrock</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>H2 <span class="ot">=</span> numDeriv<span class="sc">::</span><span class="fu">hessian</span>(fn, <span class="fu">rep</span>(<span class="fl">0.95</span>, <span class="dv">4</span>))</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>H2</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="do">##               [,1]          [,2]         [,3]          [,4]</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="do">##[1,]  7.050000e+02 -3.800000e+02  2.57614e-14 -5.973871e-13</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="do">##[2,] -3.800000e+02  9.050000e+02 -3.80000e+02  7.168344e-14</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="do">##[3,]  2.576140e-14 -3.800000e+02  9.05000e+02 -3.800000e+02</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="do">##[4,] -5.973871e-13  7.168344e-14 -3.80000e+02  2.000000e+02</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The maximum deviation here is smaller than <code>1e-11</code>, but still we see that automatic differentiation returns an exact result within floating-point arithmetic.</p>
+</section>
+<section id="special-functions" class="level3">
+<h3 class="anchored" data-anchor-id="special-functions">Special Functions</h3>
+<p>There are many special mathematical and physical functions that are not available in R, but have implementations in Julia. Other such special functions are present in R, but do not have sufficient accuracy (exactness in floating-point arithmetic). If such a special function is needed in high accuracy, Julia may come to help.</p>
+<p>For example, R has no function to call the Gamma function for complex numbers, but Julia has.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>z8 <span class="ot">=</span> <span class="fu">exp</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="dv">1</span>i<span class="sc">/</span><span class="dv">8</span>)<span class="sc">^</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>)</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"z8j"</span>, z8)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"gamma.(z8j)"</span>)</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="do">## [1]  6.212488e-01-4.261265e-01i -1.549498e-01-4.980157e-01i</span></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a><span class="do">## [3] -8.098552e-01+3.963701e-01i  0.000000e+00+2.251800e+15i</span></span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a><span class="do">## [5] -8.098552e-01-3.963701e-01i -1.549498e-01+4.980157e-01i</span></span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a><span class="do">## [7]  6.212488e-01+4.261265e-01i  1.000000e+00+0.000000e+00i</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This computes the Gamma function on all eighth roots of unity.</p>
+<p>NB: The R package <em>pracma</em> contains function <code>gammaz</code> that also calculates the Gamma function for complex numbers. The Julia version is slightly more accurate.</p>
+<p>The Julia package <em>Combinatorics</em> provides many interesting numbers such as factorials, Fibonacci or Lucas numbers, etc. Because these numbers grow (almost) exponentially all these numbers are returned as BigFloats. To get them at least as strings in R, call the Julia <code>string</code> function on them.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"Combinatorics"</span>)</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"N = Combinatorics.fibonaccinum(101);"</span>)</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>N <span class="ot">=</span> <span class="fu">julia_eval</span>(<span class="st">"string(N)"</span>)</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>N</span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>[<span class="dv">1</span>] <span class="st">"573147844013817084101"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here we compute the 101th Fibonacci number. This number is too big to be representable as an integer in R, therefore we return it as a string. With the <em>gmp</em> R package we can convert this number into a big integer and find its prime factors.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(gmp)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">factorize</span>(<span class="fu">as.bigz</span>(N))</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="do">## Big Integer ('bigz') object of length 2:</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 743519377    770857978613</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Of course, factorization can also be done in Julia after loading the <em>Primes</em> package, with <code>julia_eval("factor(BigInt(N))")</code>.</p>
+<hr>
+</section>
+</section>
+<section id="differential-equations" class="level2">
+<h2 class="anchored" data-anchor-id="differential-equations">Differential Equations</h2>
+<section id="the-diffeqr-package" class="level3">
+<h3 class="anchored" data-anchor-id="the-diffeqr-package">The ‘diffeqr’ Package</h3>
+<p>Julia is extremely strong in the area of Differential Equations (DE), due mostly to Chris Rakaukas and his <a href="https://diffeq.sciml.ai/v2.0/">DifferentialEquations</a> package. Its documentation is almost a textbook on all types of differential equations, and is recommended to all people interested in solving differential equations numerically.</p>
+<p>One could apply JuliaCall to solve differential equations through this interface. Instead Chris has provided the R package <a href="https://cran.r-project.org/package=diffeqr">diffeqr</a> that makes use of JuliaCall, but provides a nicer way of solving differential equations by employing the Julia package. When getting installed, this package imports JuliaCall anyway. Precompiling the package may take a few moments.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># library(diffeqr)</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>de <span class="ot">&lt;-</span> diffeqr<span class="sc">::</span><span class="fu">diffeq_setup</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="odes-ordinary-des" class="level3">
+<h3 class="anchored" data-anchor-id="odes-ordinary-des">ODEs (Ordinary DEs)</h3>
+<p>To solve a differential equation <code>y' = f(t,y)</code> one has to define the function <code>f</code>, an initial condition <code>y0</code>, and a time span <code>[t0, te]</code> to solve over. The result will be a vector (or matrix) of function values <code>y</code> at certain time points <code>t</code> in the interval.</p>
+<p>We will look at a simple example. The following equation <code>y' = y^2 - y^3</code> describes the flaring of a spark until it burns in a stable flame. <code>y^3</code> is the volume in which oxygen gets burnt, and <code>y^2</code> is proportional to the surface through which new oxygen can flow into the flame.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="cf">function</span>(u, p, t) p[<span class="dv">1</span>]<span class="sc">*</span>u<span class="sc">^</span><span class="dv">2</span> <span class="sc">-</span> p[<span class="dv">2</span>]<span class="sc">*</span>u<span class="sc">^</span><span class="dv">3</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.0</span>, <span class="fl">2.0</span>)</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>u0 <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">250</span>             <span class="co"># initializing flare, in cm</span></span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>tspan <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.0</span>, <span class="dv">500</span>)    <span class="co"># time span in milliseconds</span></span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Define and solve the DE problem</span></span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>prob <span class="ot">&lt;-</span> de<span class="sc">$</span><span class="fu">ODEProblem</span>(f, u0, tspan, p)</span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>sol  <span class="ot">&lt;-</span> de<span class="sc">$</span><span class="fu">solve</span>(prob, de<span class="sc">$</span><span class="fu">Tsit5</span>(), <span class="at">reltol =</span> <span class="fl">1e-08</span>,</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">saveat=</span><span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">500</span>, <span class="at">by=</span><span class="fl">2.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here <code>p</code> is a (set of) parameter(s) to adapt the defining function <code>f</code> to different situations. In <code>de$ODEProblem</code> it can be left off, in <code>f</code> not, but need not be used in the function body.</p>
+<p>Now we can plot the solution (in R). The time (the independent variable) is stored in <code>sol$t</code>, the dependent values in <code>sol$u</code> (and always named <code>u</code>).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">1</span>))</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(sol<span class="sc">$</span>t, sol<span class="sc">$</span>u, <span class="at">type=</span><span class="st">'l'</span>, <span class="at">col=</span><span class="dv">2</span>, <span class="at">lwd=</span><span class="dv">2</span>,</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Flaring of a spark into a burning flame"</span>)</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a><span class="fu">grid</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="spark.png" class="img-fluid figure-img"></p>
+<figcaption>Spark to flame example</figcaption>
+</figure>
+</div>
+<p>We can see how the spark develops for some time before it burst suddenly into a flame and gets stable within a very short time period.</p>
+<p><code>saveat</code> tells the solver, at which points to return solution values. For more information, for instance about how to involve <code>reltol</code> and <code>abstol</code>, see the vignettes of the <em>diffeqr</em> package. <code>Tsit5</code> is the default solver for non-stiff ODE problems, for stiff problems the <code>Rosenbrock23</code> solver is recommended.</p>
+<p>For a list of solvers see the <a href="https://diffeq.sciml.ai/v2.0/solvers/ode_solve.html">ODE solvers</a> page of the <em>DifferentialEquations</em> documentation. A selected solver like <code>Tsit5</code> will be called with <code>sol = de$solve(prob,de$Tsit5())</code>.</p>
+</section>
+<section id="systems-of-equations" class="level3">
+<h3 class="anchored" data-anchor-id="systems-of-equations">Systems of Equations</h3>
+<p>The <strong>Lotka-Volterra</strong> equations attempt to describe the dynamics of biological systems in which two species interact, one as a predator and the other as prey. It is assumed that the habitat is largely isolated.</p>
+<p>The model consists of two intermingled differential equations of first order.</p>
+<pre><code>y1' = p1 * y1 + p2 * y1 * y2
+y2' = p3 * y2 + p4 * y1 * y2</code></pre>
+<p>Here <code>y1</code> is the number of prey (‘rabbits’), <code>y2</code> the number of predators (‘foxes’). The coefficients characterize the interaction between the two species. For instance, <code>p3</code> should be negative as the predator will die out if there is no prey.</p>
+<p>We define a function that returns the two derivatives:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="cf">function</span>(u, p, t) {</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>    du1 <span class="ot">&lt;-</span> p[<span class="dv">1</span>] <span class="sc">*</span> u[<span class="dv">1</span>] <span class="sc">+</span> p[<span class="dv">2</span>] <span class="sc">*</span> u[<span class="dv">1</span>] <span class="sc">*</span> u[<span class="dv">2</span>]</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>    du2 <span class="ot">&lt;-</span> p[<span class="dv">3</span>] <span class="sc">*</span> u[<span class="dv">2</span>] <span class="sc">+</span> p[<span class="dv">4</span>] <span class="sc">*</span> u[<span class="dv">1</span>] <span class="sc">*</span> u[<span class="dv">2</span>]</span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>( <span class="fu">c</span>(du1, du2) )</span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>with parameters <code>p1, ..., p4</code> and time span <code>[0, 240]</code> (of weeks or months, for example) and an initial population of <code>y0 &lt;- c(50, 15)</code> (in thousands, say).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co"># p1 &lt;-  0.1;  p2 &lt;- -0.01 </span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="co"># p3 &lt;- -0.05; p4 &lt;-  0.001</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="sc">-</span><span class="fl">0.01</span>, <span class="sc">-</span><span class="fl">0.05</span>, <span class="fl">0.001</span>)</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>u0 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">15</span>)</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>tspan <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">240</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We assign the time point at which a solution shall be returned (to make the plotted function smoother) and call Julia’s Differential Equation solver as before.</p>
+<pre><code>t &lt;- seq(0, 240, by=2)
+
+prob &lt;- de$ODEProblem(f, u0, tspan, p)
+sol &lt;- de$solve(prob, rel.tol = 1e-08, saveat = t)
+
+# Convert Julia object into an R matrix
+y &lt;- sapply(sol$u,identity)</code></pre>
+<p>For systems of equations the solution is returned as an array of arrays. We convert it into an R matrix with rows representing the time series solving the problem.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar=</span><span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="at">type =</span> <span class="st">'n'</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">250</span>), <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">100</span>),</span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">'time'</span>, <span class="at">ylab =</span> <span class="st">''</span>,</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">'Solution to Lotka-Volterra equations'</span>)</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a><span class="fu">grid</span>()</span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(t, y[<span class="dv">1</span>, ], <span class="at">col =</span> <span class="dv">3</span>, <span class="at">lwd =</span> <span class="fl">1.5</span>)</span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(t, y[<span class="dv">2</span>, ], <span class="at">col =</span> <span class="dv">2</span>, <span class="at">lwd =</span> <span class="fl">1.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="lotka-volterra.png" class="img-fluid figure-img"></p>
+<figcaption>Lotka-Volterra Model</figcaption>
+</figure>
+</div>
+<p>The green line displays prey figures, the red line the predators. Both species develop in a periodic way, but the curves are not sine curves, actually they cannot be represented through elementary mathematical functions.</p>
+</section>
+<section id="second-order-differential-equations" class="level3">
+<h3 class="anchored" data-anchor-id="second-order-differential-equations">Second-order Differential Equations</h3>
+<p>Differential Equations of second order, <code>y'' = f(t, y, y')</code>, cannot be solved directly, instead we solve them as a system of two first order equations with <code>y1 = y, y2 = y'</code>, rewritng the above equation as</p>
+<pre><code>y1' = y2
+y2' = f(t, y1, y2)</code></pre>
+<p>As an example, we look at a (mathematical) pendulum. Newtonian Physics tell us that the pendulum swings according to the equation</p>
+<pre><code>u'' = -g/L * sin(u)</code></pre>
+<p>where <code>g</code> is the gravity acceleration (on earth), <code>L</code> the length of the pendulum, and <code>u</code> the elongation from the vertical direction.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fl">9.81</span>  <span class="co"># [m/s^2]</span></span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fl">1.0</span>   <span class="co"># [m]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Following the ‘trick’ above function <code>f</code> looks as</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="cf">function</span>(u, p, t) {</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>    du1 <span class="ot">&lt;-</span> u[<span class="dv">2</span>]               <span class="co"># u1' = u'  = u2</span></span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>    du2 <span class="ot">&lt;-</span> <span class="sc">-</span>g<span class="sc">/</span>L <span class="sc">*</span> <span class="fu">sin</span>(u[<span class="dv">1</span>])   <span class="co"># u2' = u'' = -g/L sin(u)</span></span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>( <span class="fu">c</span>(du1, du2) )</span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We solve this system as we did before. Start with an elongation of 45 degrees (and no velocity) and observe for 10 seconds.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>u0 <span class="ot">&lt;-</span> <span class="fu">c</span>(pi<span class="sc">/</span><span class="dv">4</span>, <span class="dv">0</span>)</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>tspan <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>t <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">10</span>, <span class="at">length =</span> <span class="dv">100</span>)</span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a>prob <span class="ot">&lt;-</span> de<span class="sc">$</span><span class="fu">ODEProblem</span>(f, u0, tspan)</span>
+<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a>sol <span class="ot">&lt;-</span> de<span class="sc">$</span><span class="fu">solve</span>(prob, <span class="at">rel.tol =</span> <span class="fl">1e-08</span>, <span class="at">saveat =</span> t)</span>
+<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert Julia object into an R matrix</span></span>
+<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">sapply</span>(sol<span class="sc">$</span>u,identity)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>u &lt;- y[1, ]     # elongation
+v &lt;- y[2, ]     # angular velocity
+
+par(mar = c(3,2,2,1))
+plot(t, u, type = 'l', col = 4, lwd = 1.5,
+     main = "Pendulum (accurate and approximated)")
+lines(t, pi/4 * sin(sqrt(g/L)*t + pi/2), lty = 2)
+grid()</code></pre>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="pendulum.png" class="img-fluid figure-img"></p>
+<figcaption>The mathematical pendulum</figcaption>
+</figure>
+</div>
+<p>The pendulum swings back-and-forth with a frequency of about 2 seconds.</p>
+<p>For small values of <code>u</code> it holds that approximately <code>sin(u) = u</code> and the differential equation reduces to <code>u'' = -g/L * u</code>, and we know the symbolic solution <code>u = sin(c1*t + c2)</code> . Considering the starting conditions, the approximate solution will be <code>u = pi/4 * sin(sqrt(g/L) * t + pi/2)</code> . This is plotted as a black, dotted line in the figure above.</p>
+<p>We can see that the approximate solution is oscillating slightly faster.</p>
+<hr>
+</section>
+</section>
+<section id="optimization-and-jump" class="level2">
+<h2 class="anchored" data-anchor-id="optimization-and-jump">Optimization and JuMP</h2>
+<section id="the-optim-package" class="level3">
+<h3 class="anchored" data-anchor-id="the-optim-package">The ‘Optim’ package</h3>
+<p>Minimize the Rosenbrock function in 10 dimensions. This test function is, e.g., defined in the <em>adagio</em> package, together with its exact gradient function. The starting point shall be <span class="math inline">\(x0 = (0.01, \ldots , 0.01)\)</span>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">=</span> adagio<span class="sc">::</span>fnRosenbrock</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>gr <span class="ot">=</span> adagio<span class="sc">::</span>grRosenbrock</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In Base R we would employ the standard <code>optim()</code> solver with one of the methods “Nelder-Mead”, “BFGS”, or “L-BFGS-B”.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>x0 <span class="ot">=</span> <span class="fu">rep</span>(<span class="fl">0.01</span>, <span class="dv">10</span>)</span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>sol <span class="ot">=</span> <span class="fu">optim</span>(x0, fn, gr, <span class="at">method=</span><span class="st">"BFGS"</span>,</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">control=</span><span class="fu">list</span>(<span class="at">reltol=</span><span class="fl">1e-10</span>, <span class="at">maxit=</span><span class="dv">1000</span>))</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>sol</span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a><span class="do">## $par</span></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a><span class="do">##  [1] 1 1 1 1 1 1 1 1 1 1</span></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a><span class="do">## $value</span></span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 1.998483e-24</span></span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a><span class="do">## ...</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Instead we now employ the <code>optimize()</code> function in Julia, available in its <em>Optim</em> package that we have already loaded. First, we make <code>fnRosenbrock</code> available in Julia.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"fn"</span>, fn)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_assign</span>(<span class="st">"gr"</span>, gr)</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_call</span>(<span class="st">"fn"</span>, <span class="fu">rep</span>(<span class="dv">0</span>, <span class="dv">10</span>))    <span class="co"># is 'fn' known in Julia?</span></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a><span class="do">## [1] 9</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"result = optimize(fn, zeros(10), BFGS())"</span>)</span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Results of Optimization Algorithm</span></span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Algorithm: BFGS</span></span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Starting Point: [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]</span></span>
+<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Minimizer: [0.9999999999096328,0.9999999998570117, ...]</span></span>
+<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Minimum: 1.634017e-16</span></span>
+<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Iterations: 64</span></span>
+<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Convergence: true</span></span>
+<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a><span class="do">##    * |x - x'| &lt; 1.0e-32: false </span></span>
+<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a><span class="do">##      |x - x'| = 3.24e-11 </span></span>
+<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a><span class="do">##    * |f(x) - f(x')| / |f(x)| &lt; 1.0e-32: false</span></span>
+<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a><span class="do">##      |f(x) - f(x')| / |f(x)| = NaN </span></span>
+<span id="cb71-13"><a href="#cb71-13" aria-hidden="true" tabindex="-1"></a><span class="do">##    * |g(x)| &lt; 1.0e-08: true </span></span>
+<span id="cb71-14"><a href="#cb71-14" aria-hidden="true" tabindex="-1"></a><span class="do">##      |g(x)| = 6.12e-10 </span></span>
+<span id="cb71-15"><a href="#cb71-15" aria-hidden="true" tabindex="-1"></a><span class="do">##    * stopped by an increasing objective: false</span></span>
+<span id="cb71-16"><a href="#cb71-16" aria-hidden="true" tabindex="-1"></a><span class="do">##    * Reached Maximum Number of Iterations: false</span></span>
+<span id="cb71-17"><a href="#cb71-17" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Objective Calls: 160</span></span>
+<span id="cb71-18"><a href="#cb71-18" aria-hidden="true" tabindex="-1"></a><span class="do">##  * Gradient Calls: 160</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>With appending a semicolon ‘;’ we can suppress the output.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"result = optimize(fn, zeros(10), LBFGS());"</span>)</span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>xmin <span class="ot">=</span> <span class="fu">julia_eval</span>(<span class="st">"result.minimizer"</span>)</span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>xmin</span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a><span class="do">##  [1] 1 1 1 1 1 1 1 1 1 1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Because no gradient is supplied, the gradient is automatically computed applying the central-difference formula. Most of the time this is sufficient for getting good results.</p>
+</section>
+<section id="using-jump-and-ipopt" class="level3">
+<h3 class="anchored" data-anchor-id="using-jump-and-ipopt">Using ‘JuMP’ and ‘Ipopt’</h3>
+<p>Task: Minimize the Rosenbrock function in 10 dimensions with constraints <code>0 &lt;= x[i] &lt;= 0.5</code>.</p>
+<p>First we load the necessary packages and define the optimization model <code>m</code> with Ipopt as solver.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"JuMP"</span>)</span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_library</span>(<span class="st">"Ipopt"</span>)</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"m = Model(solver = IpoptSolver())"</span>)</span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a><span class="do">## Feasibility problem with:</span></span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a><span class="do">##  * 0 linear constraints</span></span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a><span class="do">##  * 0 variables</span></span>
+<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a><span class="do">## Solver is Ipopt</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Next we have to redefine Rosenbrock with variable arguments when we want to apply the <em>JuMP</em> modeling language.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"# Rosenbrock function</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a><span class="st">    function rosen(x...)</span></span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a><span class="st">        local n = length(x); local s = 0.0</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a><span class="st">        for i = 1:length(x)-1</span></span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a><span class="st">            s += 100*(x[i+1] - x[i]^2)^2 + (x[i] - 1)^2</span></span>
+<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a><span class="st">        end</span></span>
+<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a><span class="st">        return s</span></span>
+<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a><span class="st">    end</span></span>
+<span id="cb74-9"><a href="#cb74-9" aria-hidden="true" tabindex="-1"></a><span class="st">"</span>)</span>
+<span id="cb74-10"><a href="#cb74-10" aria-hidden="true" tabindex="-1"></a><span class="do">## rosen (generic function with 1 method)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The variables with bound constraints and starting values <span class="math inline">\(x_i = 0.1\)</span> are defined and initiated.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"@variable(m, 0.0 &lt;= x[1:10] &lt;= 0.5);"</span>)</span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"for i in 1:10 setvalue(x[i], 0.1); end"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Register the objective function and set it as target function for the solver.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"JuMP.register(m, :rosen, 10, rosen, autodiff=true)"</span>)</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"JuMP.setNLobjective(m, :Min,</span></span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a><span class="st">                   Expr(:call, :rosen, [x[i] for i=1:10]...))"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Solve this model problem and extract, for instance, the 10th component of the solution.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"sol = solve(m);"</span>)</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="do">## This is Ipopt version 3.12.4, running with linear solver mumps.</span></span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a><span class="do">## </span><span class="al">NOTE</span><span class="do">: Other linear solvers might be more efficient</span></span>
+<span id="cb77-4"><a href="#cb77-4" aria-hidden="true" tabindex="-1"></a><span class="do">## (see Ipopt documentation).</span></span>
+<span id="cb77-5"><a href="#cb77-5" aria-hidden="true" tabindex="-1"></a><span class="do">## [...]</span></span>
+<span id="cb77-6"><a href="#cb77-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-7"><a href="#cb77-7" aria-hidden="true" tabindex="-1"></a><span class="do">## EXIT: Optimal Solution Found.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Finally we copy the solution, i.e.&nbsp;the minimum found, over to R and see that the last value <code>x[10]</code> is <em>not</em> zero, as that is claimed in R by the <code>optim</code> solver with method “L-BFGS-B”.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_eval</span>(<span class="st">"getvalue(x)"</span>)</span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a><span class="do">##  [1] 0.5000000000 0.2630659929 0.0800311191 0.0165742352 0.0103806763</span></span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a><span class="do">##  [6] 0.0102120052 0.0102084109 0.0102042121 0.0100040851 0.0001000822</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="constraints-the-nlopt-package" class="level3">
+<h3 class="anchored" data-anchor-id="constraints-the-nlopt-package">Constraints: The ‘NLopt’ package</h3>
+<hr>
+</section>
+</section>
+<section id="appendix" class="level2">
+<h2 class="anchored" data-anchor-id="appendix">Appendix</h2>
+<section id="timing" class="level3">
+<h3 class="anchored" data-anchor-id="timing">Timing</h3>
+<p>We want to compare some timings of R and Julia functions and also see how much overhead we get when calling functions in Julia. A suggested test function is ‘trapezoidal integration’, in R available as <code>pracma::trapz</code>. Converting this function to Julia and polish it for JIT compilation, the function could look like:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"# Trapezoidal integration</span></span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a><span class="st">function trapz{T&lt;:Number}(x::Array{T,1}, y::Array{T,1})</span></span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a><span class="st">    local n = length(x)</span></span>
+<span id="cb79-4"><a href="#cb79-4" aria-hidden="true" tabindex="-1"></a><span class="st">    r = zero(T)</span></span>
+<span id="cb79-5"><a href="#cb79-5" aria-hidden="true" tabindex="-1"></a><span class="st">    if n == 1 return r end</span></span>
+<span id="cb79-6"><a href="#cb79-6" aria-hidden="true" tabindex="-1"></a><span class="st">    for i in 2:n</span></span>
+<span id="cb79-7"><a href="#cb79-7" aria-hidden="true" tabindex="-1"></a><span class="st">        @inbounds r += (x[i] - x[i-1]) * (y[i] + y[i-1])</span></span>
+<span id="cb79-8"><a href="#cb79-8" aria-hidden="true" tabindex="-1"></a><span class="st">    end</span></span>
+<span id="cb79-9"><a href="#cb79-9" aria-hidden="true" tabindex="-1"></a><span class="st">    r / 2.0</span></span>
+<span id="cb79-10"><a href="#cb79-10" aria-hidden="true" tabindex="-1"></a><span class="st">end"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This function is also defined in file <code>miscellaneous</code> and thus already exists in the Julia process. We call it once to kick off JIT compilation.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"x = collect(linspace(0, pi, 1000));"</span>)</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"y = broadcast(sin, x);"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here <code>collect</code> is used because <code>linspace</code> generates a ‘Range’ object, not a vector. And <code>broadcast</code> is the same as the dot notation <code>sin.(x)</code>.</p>
+<p>We call <code>trapz()</code> one time to initiate JIT compilation and see the result, than utilize the Julia <code>@time</code> <em>macro</em> to see the timing in Julia.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"trapz(x, y)"</span>)</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a><span class="do">## 1.999998351770852</span></span>
+<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb81-4"><a href="#cb81-4" aria-hidden="true" tabindex="-1"></a><span class="fu">julia_command</span>(<span class="st">"@time [trapz(x, y) for i=1:100];"</span>)</span>
+<span id="cb81-5"><a href="#cb81-5" aria-hidden="true" tabindex="-1"></a><span class="do">## 0.042592 seconds (13.37 k allocations: 710.781 KiB)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In R we could apply the <em>microbenchmark</em> package, here we will be content with the <code>system.time()</code> command.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">require</span>(pracma)</span>
+<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">linspace</span>(<span class="dv">0</span>, pi, <span class="dv">1000</span>)</span>
+<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>y <span class="ot">=</span> <span class="fu">sin</span>(x)</span>
+<span id="cb82-4"><a href="#cb82-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb82-5"><a href="#cb82-5" aria-hidden="true" tabindex="-1"></a><span class="fu">system.time</span>( <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>) <span class="fu">trapz</span>(x, y) )</span>
+<span id="cb82-6"><a href="#cb82-6" aria-hidden="true" tabindex="-1"></a><span class="do">##    user  system elapsed </span></span>
+<span id="cb82-7"><a href="#cb82-7" aria-hidden="true" tabindex="-1"></a><span class="do">##   0.012   0.005   0.017</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Now compare this with a test that includes all the overhead for calling the Julia function from R and the get the vectors back from R.</p>
+<pre><code>julia_assign("xx", x)
+julia_assign("yy", y)
+
+system.time( for (i in 1:100) julia_call("trapz", x, y) )
+##    user  system elapsed 
+##   0.040   0.000   0.040 
+
+system.time( for (i in 1:100) julia_command("trapz(xx, yy);") )
+##    user  system elapsed 
+##   0.045   0.000   0.045 </code></pre>
+<p>A slightly better approach might be to use the <code>RObject</code> function which generates a simple wrapper of a Julia object in R.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>xx <span class="ot">&lt;-</span> <span class="fu">JuliaObject</span>(x)</span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>yy <span class="ot">&lt;-</span> <span class="fu">JuliaObject</span>(y)</span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a><span class="fu">system.time</span>( <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>) <span class="fu">julia_call</span>(<span class="st">"trapz"</span>, xx, yy) )</span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a><span class="do">##    user  system elapsed </span></span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a><span class="do">##   0.042   0.000   0.042 </span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The overhead is considerable which was to be expected.</p>
+</section>
+<section id="links-and-references" class="level3">
+<h3 class="anchored" data-anchor-id="links-and-references">Links and References</h3>
+<hr>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
